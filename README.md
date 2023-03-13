@@ -10,3 +10,5 @@ Features:
   - `GetAll`
   - `Delete`
   - `SoftDelete`
+  - `CreateAll`
+  - `Paginate`
