@@ -1,11 +1,10 @@
-package firestore
+package repo
 
 import (
 	"cloud.google.com/go/firestore"
 	"context"
 	"github.com/maohieng/errs"
 	gofire "github.com/maohieng/go-firestore"
-	"github.com/maohieng/go-repo"
 	"log"
 )
 
@@ -19,7 +18,7 @@ type FirestoreRepo struct {
 	logger  *log.Logger
 }
 
-func (f *FirestoreRepo) Create(ctx context.Context, item repo.BaseEntityType) (id string, err error) {
+func (f *FirestoreRepo) Create(ctx context.Context, item BaseEntityType) (id string, err error) {
 	const op errs.Op = "firestore.Create"
 	id, err = gofire.Create(ctx, f.client, item)
 	if err != nil {
@@ -29,7 +28,7 @@ func (f *FirestoreRepo) Create(ctx context.Context, item repo.BaseEntityType) (i
 	return
 }
 
-func (f *FirestoreRepo) CreateAll(ctx context.Context, items []repo.BaseEntityType) (ids []string, err error) {
+func (f *FirestoreRepo) CreateAll(ctx context.Context, items []BaseEntityType) (ids []string, err error) {
 	const op errs.Op = "firestore.CreateAll"
 	ids, err = gofire.BulkCreate(ctx, f.client, items)
 	if ids == nil && err != nil {
@@ -53,7 +52,7 @@ func (f *FirestoreRepo) Update(ctx context.Context, id string, fv map[string]int
 	return nil
 }
 
-func (f *FirestoreRepo) GetOne(ctx context.Context, id string, item repo.BaseEntityType) error {
+func (f *FirestoreRepo) GetOne(ctx context.Context, id string, item BaseEntityType) error {
 	var op errs.Op = "firestore.GetOne"
 	err := gofire.GetOne(ctx, f.client, id, item)
 	if err != nil {
@@ -63,7 +62,7 @@ func (f *FirestoreRepo) GetOne(ctx context.Context, id string, item repo.BaseEnt
 	return nil
 }
 
-func (f *FirestoreRepo) GetAll(ctx context.Context, newItem func() repo.BaseEntityType) ([]repo.BaseEntityType, error) {
+func (f *FirestoreRepo) GetAll(ctx context.Context, newItem func() BaseEntityType) ([]BaseEntityType, error) {
 	var op errs.Op = "firestore.GetAll"
 	results, err := gofire.GetAll(ctx, f.client, newItem)
 	if err != nil {
@@ -73,11 +72,11 @@ func (f *FirestoreRepo) GetAll(ctx context.Context, newItem func() repo.BaseEnti
 	return results, nil
 }
 
-func (f *FirestoreRepo) Paginate(ctx context.Context, limit int, startToken string, newItem func() repo.BaseEntityType) (repo.Page, error) {
+func (f *FirestoreRepo) Paginate(ctx context.Context, limit int, startToken string, newItem func() BaseEntityType) (Page, error) {
 	var op errs.Op = "firestore.Pagination"
 	p, err := gofire.Paginate(ctx, f.client, limit, startToken, newItem)
 	if err != nil {
-		return repo.Page{}, errs.New(err, op)
+		return Page{}, errs.New(err, op)
 	}
 
 	return p, nil

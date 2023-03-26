@@ -1,11 +1,10 @@
-package firestore
+package repo
 
 import (
 	"cloud.google.com/go/firestore"
 	"context"
 	"encoding/json"
 	"github.com/maohieng/go-firebase"
-	"github.com/maohieng/go-repo"
 	"log"
 	"os"
 	"testing"
@@ -14,7 +13,7 @@ import (
 const TestMenuCollection = "test_menus"
 
 type Menu struct {
-	repo.BaseEntity
+	BaseEntity
 	Name string `firestore:"name" json:"name"`
 }
 
@@ -52,7 +51,7 @@ func TestMain(m *testing.M) {
 
 func TestCreate(t *testing.T) {
 	id, err := crudrepo.Create(ctx, &Menu{
-		BaseEntity: repo.BaseEntity{},
+		BaseEntity: BaseEntity{},
 		Name:       "test 1",
 	})
 
@@ -86,7 +85,7 @@ func TestGetOne(t *testing.T) {
 }
 
 func TestGetAll(t *testing.T) {
-	results, err := crudrepo.GetAll(ctx, func() repo.BaseEntityType {
+	results, err := crudrepo.GetAll(ctx, func() BaseEntityType {
 		return &Menu{}
 	})
 
@@ -101,16 +100,16 @@ func TestGetAll(t *testing.T) {
 func TestCreateAll(t *testing.T) {
 	menus := []*Menu{
 		{
-			BaseEntity: repo.BaseEntity{},
+			BaseEntity: BaseEntity{},
 			Name:       "all in 1",
 		},
 		{
-			BaseEntity: repo.BaseEntity{},
+			BaseEntity: BaseEntity{},
 			Name:       "all in 2",
 		},
 	}
 
-	entities := make([]repo.BaseEntityType, 0, len(menus))
+	entities := make([]BaseEntityType, 0, len(menus))
 	for _, menu := range menus {
 		entities = append(entities, menu)
 	}
@@ -123,8 +122,8 @@ func TestCreateAll(t *testing.T) {
 	t.Logf("CreateAll: %v", ids)
 }
 
-func recursivePages(t *testing.T, page repo.Page, numb int) {
-	resultPage, err := crudrepo.Paginate(ctx, 3, page.NextToken, func() repo.BaseEntityType {
+func recursivePages(t *testing.T, page Page, numb int) {
+	resultPage, err := crudrepo.Paginate(ctx, 3, page.NextToken, func() BaseEntityType {
 		return &Menu{}
 	})
 	if err != nil {
@@ -144,7 +143,7 @@ func recursivePages(t *testing.T, page repo.Page, numb int) {
 }
 
 func TestPaginate(t *testing.T) {
-	recursivePages(t, repo.Page{}, 1)
+	recursivePages(t, Page{}, 1)
 }
 
 func TestSoftDelete(t *testing.T) {
