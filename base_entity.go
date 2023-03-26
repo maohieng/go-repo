@@ -7,6 +7,7 @@ type BaseEntityType interface {
 	SetActive(active bool)
 	GetId() string
 	SetId(id string)
+	TableName() string
 }
 
 type BaseEntity struct {
