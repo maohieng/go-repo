@@ -5,6 +5,14 @@ import (
 	gofire "github.com/maohieng/go-firestore"
 )
 
+const ActiveFieldName = "active"
+
+type BaseRepoEntity interface {
+	gofire.BaseEntity
+	GetActive() bool
+	SetActive(active bool)
+}
+
 type CRUDRepository interface {
 	Create(ctx context.Context, item BaseRepoEntity) (id string, err error)
 	CreateAll(ctx context.Context, items []BaseRepoEntity) (ids []string, err error)
@@ -26,3 +34,24 @@ type CRUDRepository interface {
 //	Delete(ctx context.Context, id string) error
 //	SoftDelete(ctx context.Context, id string) error
 //}
+
+type SimpleRepoEntity struct {
+	Active bool   `json:"-" firestore:"active" db:"active"`
+	Id     string `json:"id" firestore:"-" db:"id"`
+}
+
+func (b *SimpleRepoEntity) GetActive() bool {
+	return b.Active
+}
+
+func (b *SimpleRepoEntity) SetActive(active bool) {
+	b.Active = active
+}
+
+func (b *SimpleRepoEntity) GetId() string {
+	return b.Id
+}
+
+func (b *SimpleRepoEntity) SetId(id string) {
+	b.Id = id
+}
