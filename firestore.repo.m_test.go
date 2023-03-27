@@ -5,6 +5,8 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/maohieng/go-firebase"
+	gofire "github.com/maohieng/go-firestore"
+	"github.com/maohieng/go-price"
 	"log"
 	"os"
 	"testing"
@@ -13,11 +15,12 @@ import (
 const TestMenuCollection = "test_menus"
 
 type Menu struct {
-	BaseEntity
-	Name string `firestore:"name" json:"name"`
+	SimpleRepoEntity
+	Name  string             `firestore:"name" json:"name"`
+	Price price.MutablePrice `firestore:"price" json:"price"`
 }
 
-func (m *Menu) TableName() string {
+func (m Menu) TableName() string {
 	return TestMenuCollection
 }
 
@@ -43,7 +46,7 @@ func TestMain(m *testing.M) {
 			}
 		}(fStore)
 
-		crudrepo = &FirestoreRepo{client: fStore, cllName: TestMenuCollection, logger: log.Default()}
+		crudrepo = NewFirestoreRepository(fStore, TestMenuCollection, log.Default()).(*FirestoreRepo)
 
 		return m.Run()
 	}())
@@ -51,8 +54,9 @@ func TestMain(m *testing.M) {
 
 func TestCreate(t *testing.T) {
 	id, err := crudrepo.Create(ctx, &Menu{
-		BaseEntity: BaseEntity{},
-		Name:       "test 1",
+		SimpleRepoEntity: SimpleRepoEntity{},
+		Name:             "test 1",
+		Price:            price.NewMutablePrice(price.NewFromInt(125, 100, "KHR")),
 	})
 
 	if err != nil {
@@ -66,7 +70,7 @@ func TestCreate(t *testing.T) {
 
 func TestUpdate(t *testing.T) {
 	fv := make(map[string]any, 0)
-	fv["name"] = "Update test again"
+	fv["price"] = price.NewMutablePrice(price.NewFromInt(3131, 100, "KHR"))
 	err := crudrepo.Update(ctx, "WjnvkMFKfN7I4UbK5NQM", fv)
 	if err != nil {
 		t.Fatalf("Expected success, got %v", err)
@@ -75,7 +79,7 @@ func TestUpdate(t *testing.T) {
 
 func TestGetOne(t *testing.T) {
 	item := &Menu{}
-	err := crudrepo.GetOne(ctx, "WjnvkMFKfN7I4UbK5NQM", item)
+	err := crudrepo.GetOne(ctx, "WjnvkMFKfN7I4UbK5NQM", item, true)
 	if err != nil {
 		t.Fatalf("Expected success, got %v", err)
 	}
@@ -85,9 +89,22 @@ func TestGetOne(t *testing.T) {
 }
 
 func TestGetAll(t *testing.T) {
-	results, err := crudrepo.GetAll(ctx, func() BaseEntityType {
+	results, err := crudrepo.GetAll(ctx, func() BaseRepoEntity {
 		return &Menu{}
-	})
+	}, false)
+
+	if err != nil {
+		t.Fatalf("Expected success, got %v", err)
+	}
+
+	itemJson, _ := json.Marshal(results)
+	t.Logf("GetAll: %s", string(itemJson))
+}
+
+func TestGetAllActive(t *testing.T) {
+	results, err := crudrepo.GetAll(ctx, func() BaseRepoEntity {
+		return &Menu{}
+	}, true)
 
 	if err != nil {
 		t.Fatalf("Expected success, got %v", err)
@@ -100,16 +117,16 @@ func TestGetAll(t *testing.T) {
 func TestCreateAll(t *testing.T) {
 	menus := []*Menu{
 		{
-			BaseEntity: BaseEntity{},
-			Name:       "all in 1",
+			SimpleRepoEntity: SimpleRepoEntity{},
+			Name:             "all in 1",
 		},
 		{
-			BaseEntity: BaseEntity{},
-			Name:       "all in 2",
+			SimpleRepoEntity: SimpleRepoEntity{},
+			Name:             "all in 2",
 		},
 	}
 
-	entities := make([]BaseEntityType, 0, len(menus))
+	entities := make([]BaseRepoEntity, 0, len(menus))
 	for _, menu := range menus {
 		entities = append(entities, menu)
 	}
@@ -122,10 +139,10 @@ func TestCreateAll(t *testing.T) {
 	t.Logf("CreateAll: %v", ids)
 }
 
-func recursivePages(t *testing.T, page Page, numb int) {
-	resultPage, err := crudrepo.Paginate(ctx, 3, page.NextToken, func() BaseEntityType {
+func recursivePages(t *testing.T, onlyActive bool, page gofire.Page, numb int) {
+	resultPage, err := crudrepo.Paginate(ctx, page, func() BaseRepoEntity {
 		return &Menu{}
-	})
+	}, onlyActive)
 	if err != nil {
 		t.Fatalf("Expected success, got %v", err)
 	}
@@ -139,11 +156,21 @@ func recursivePages(t *testing.T, page Page, numb int) {
 	}
 
 	numb++
-	recursivePages(t, resultPage, numb)
+	recursivePages(t, onlyActive, resultPage, numb)
 }
 
-func TestPaginate(t *testing.T) {
-	recursivePages(t, Page{}, 1)
+func TestPaginateAll(t *testing.T) {
+	recursivePages(t, false, gofire.Page{
+		NextToken: "",
+		Limit:     3,
+	}, 1)
+}
+
+func TestPaginateActive(t *testing.T) {
+	recursivePages(t, true, gofire.Page{
+		NextToken: "",
+		Limit:     3,
+	}, 1)
 }
 
 func TestSoftDelete(t *testing.T) {
@@ -154,7 +181,8 @@ func TestSoftDelete(t *testing.T) {
 }
 
 func TestDelete(t *testing.T) {
-	err := crudrepo.SoftDelete(ctx, toDeletedId)
+	// This delete depends on Create test func above
+	err := crudrepo.Delete(ctx, toDeletedId)
 	if err != nil {
 		t.Fatalf("Expected success, got %v", err)
 	}
